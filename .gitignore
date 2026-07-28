@@ -1,0 +1,24 @@
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build output
+**/bin/
+**/obj/
+
+# Visual Studio temporary files
+*.vs/
+
+# .NET tools
+*.dotnet_tool
+
+# ASP.NET Core https development certificate
+**/Properties/launchSettings.json
+
+# Solution artifacts
+*.slnx
+
+# IDE metadata
+.vscode/
