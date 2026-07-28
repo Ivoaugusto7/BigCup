@@ -1,4 +1,4 @@
-# BigCup Monorepo
+# BigCup 
 
 This monorepo contains a backend ASP.NET Core Web API and a frontend workspace shell.
 
