@@ -5,9 +5,7 @@ function StatusBadge({ label, tone = 'info' }) {
   };
 
   return (
-    <span className={`mt-4 inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ring-1 ${tones[tone]}`}>
-      {label}
-    </span>
+    <span className={`mt-4 inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ring-1 ${tones[tone]} transition-colors duration-150`}>{label}</span>
   );
 }
 

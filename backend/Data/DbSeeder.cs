@@ -14,7 +14,17 @@ namespace BigCup.Data
 
         public async Task SeedAsync(CancellationToken cancellationToken = default)
         {
-            await _context.Database.MigrateAsync(cancellationToken);
+            try
+            {
+                await _context.Database.MigrateAsync(cancellationToken);
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Migrations may be pending or incompatible for the current provider (e.g. running SQLite against SQLServer migrations).
+                // Fall back to EnsureCreated which creates the DB schema for development convenience.
+                Console.WriteLine("Warning: Migrate failed, falling back to EnsureCreated. " + ex.Message);
+                await _context.Database.EnsureCreatedAsync(cancellationToken);
+            }
 
             if (await _context.Drinks.AnyAsync(cancellationToken))
             {
