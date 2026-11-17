@@ -22,3 +22,16 @@
 
 # IDE metadata
 .vscode/
+
+# Frontend dependencies and build output
+**/node_modules/
+frontend/dist/
+
+# Local databases (SQLite dev fallback)
+*.db
+*.db-shm
+*.db-wal
+
+# Local environment files
+.env
+.env.local

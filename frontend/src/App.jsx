@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Layout from './components/layout/Layout';
 import Sidebar from './components/layout/Sidebar';
 import DrinkCard from './components/drinks/DrinkCard';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 const STATIC_CONTAINERS = [
   { id: 1, nome: 'Shot', volume: '50 ml', icone: '🥃' },
@@ -11,6 +13,24 @@ const STATIC_CONTAINERS = [
   { id: 5, nome: 'Garrafa', volume: '2 Litros', icone: '🍾' },
   { id: 6, nome: 'Galão', volume: '5 Litros', icone: '🛢️' },
 ];
+
+// Converte um RecipienteDto da API ({ id, nome, capacidadeMl }) para o formato usado pelos cards.
+export function mapRecipiente(d) {
+  const vol = Number(d.capacidadeMl ?? d.volume ?? 0);
+  const nome = (d.nome ?? '').toLowerCase();
+
+  let icone = '🥤';
+  if (nome.includes('shot') || vol === 50) icone = '🥃';
+  else if (vol === 300) icone = '🥛';
+  else if (vol === 500) icone = '🍺';
+  else if (vol === 700) icone = '🥤';
+  else if (nome.includes('garrafa') || (vol >= 2000 && vol < 5000)) icone = '🍾';
+  else if (nome.includes('gal') || vol >= 5000) icone = '🛢️';
+
+  const volume = vol >= 1000 ? `${vol / 1000} Litros` : `${vol} ml`;
+
+  return { id: d.id, nome: d.nome, volume, icone };
+}
 
 function App() {
   const [selectedContainer, setSelectedContainer] = useState(null);
@@ -50,92 +70,32 @@ function App() {
     }
   }
 
-  // Fetch containers from backend API with retry support
-  useEffect(() => {
-    let cancelled = false;
-
-    async function fetchContainers() {
-      setLoading(true);
-      setError(null);
-      const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-      const url = `${base}/api/recipientes`;
-
-      try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-
-        if (cancelled) return;
-
-        const mapped = data.map((d) => {
-          const vol = d.volume;
-          let icone = '🥤';
-          if (d.nome.toLowerCase().includes('shot') || vol === 50) icone = '🥃';
-          else if (vol === 300) icone = '🥛';
-          else if (vol === 500) icone = '🍺';
-          else if (vol === 700) icone = '🥤';
-          else if (d.nome.toLowerCase().includes('garrafa') || (vol >= 2000 && vol < 5000)) icone = '🍾';
-          else if (d.nome.toLowerCase().includes('gal') || vol >= 5000) icone = '🛢️';
-
-          const volumeLabel = vol >= 1000 ? `${vol / 1000} Litros` : `${vol} ml`;
-
-          return { id: d.id, nome: d.nome, volume: volumeLabel, icone };
-        });
-
-        setContainers(mapped);
-      } catch (err) {
-        console.warn('Could not fetch recipientes:', err?.message ?? err);
-        if (!cancelled) setError(err?.message ?? 'Failed to fetch');
-        // keep fallback STATIC_CONTAINERS (already set as initial state)
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    // expose for retry by attaching to window for dev convenience
-    fetchContainers();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Retry handler used by UI
-  function handleRetry() {
-    // trigger the effect by calling a fetch anew: call the same logic via a small wrapper
-    const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-    const url = `${base}/api/recipientes`;
-
+  // Busca os recipientes na API; em caso de erro mantém a lista estática (fallback).
+  const fetchContainers = useCallback(async (isCancelled = () => false) => {
     setLoading(true);
     setError(null);
 
-    fetch(url)
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
-      .then((data) => {
-        const mapped = data.map((d) => {
-          const vol = d.volume;
-          let icone = '🥤';
-          if (d.nome.toLowerCase().includes('shot') || vol === 50) icone = '🥃';
-          else if (vol === 300) icone = '🥛';
-          else if (vol === 500) icone = '🍺';
-          else if (vol === 700) icone = '🥤';
-          else if (d.nome.toLowerCase().includes('garrafa') || (vol >= 2000 && vol < 5000)) icone = '🍾';
-          else if (d.nome.toLowerCase().includes('gal') || vol >= 5000) icone = '🛢️';
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/recipientes`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
 
-          const volumeLabel = vol >= 1000 ? `${vol / 1000} Litros` : `${vol} ml`;
+      if (!isCancelled()) setContainers(data.map(mapRecipiente));
+    } catch (err) {
+      console.warn('Could not fetch recipientes:', err?.message ?? err);
+      if (!isCancelled()) setError(err?.message ?? 'Failed to fetch');
+    } finally {
+      if (!isCancelled()) setLoading(false);
+    }
+  }, []);
 
-          return { id: d.id, nome: d.nome, volume: volumeLabel, icone };
-        });
-
-        setContainers(mapped);
-        setError(null);
-      })
-      .catch((err) => setError(err?.message ?? 'Failed to fetch'))
-      .finally(() => setLoading(false));
-  }
+  useEffect(() => {
+    let cancelled = false;
+    fetchContainers(() => cancelled);
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchContainers]);
 
   return (
     <Layout>
@@ -153,7 +113,7 @@ function App() {
               <div className="mt-2 flex items-center gap-3">
                 <p className="text-sm text-amber-400">Erro ao carregar: {error}</p>
                 <button
-                  onClick={handleRetry}
+                  onClick={() => fetchContainers()}
                   className="rounded-md bg-amber-600 px-3 py-1 text-sm font-semibold text-white hover:bg-amber-500"
                 >
                   Tentar novamente
