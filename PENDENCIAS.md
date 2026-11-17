@@ -11,7 +11,6 @@ Lista do que falta ou precisa melhorar. Marque com `[x]` ao concluir.
 - [ ] **Recuperação de senha / confirmação de e-mail**: os endpoints do Identity existem, mas falta configurar um `IEmailSender` real.
 
 ## Qualidade e manutenção
-- [ ] **Enviar o CI do backend** (`.github/workflows/ci.yml`: build + verificação de migrations dos dois provedores). A alteração está pronta localmente, mas o push foi recusado porque a credencial do Git não tem o escopo `workflow`.
 - [ ] **Testes automatizados do backend** (projeto de testes com WebApplicationFactory + SQLite; hoje o roteiro de testes é manual).
 - [ ] **Favicon**: o `frontend/index.html` não define ícone, o que gera um erro 404 no console do navegador.
 - [ ] **`dotnet build` dentro de `backend/`** pede o nome do projeto (há `.sln` e `.csproj` na mesma pasta); usar `dotnet build backend.csproj` ou mover a solução para a raiz.
@@ -26,6 +25,7 @@ Lista do que falta ou precisa melhorar. Marque com `[x]` ao concluir.
 - [x] Usuários com login (ASP.NET Core Identity) — drinks e avaliações por usuário, avaliações privadas
 - [x] Integridade no banco: nota 1–5, quantidade > 0, ingrediente único (sem diferenciar maiúsculas), ordem de passo única, uma avaliação por usuário/drink
 - [x] Datas em UTC
+- [x] CI compila o backend e verifica migrations dos dois provedores — commit `c5cd6fa`
 - [x] Recipientes no banco com nomes distintos (Copo pequeno/médio/grande)
 - [x] CORS restrito por configuração
 - [x] Namespace das migrations (`BigCup.Migrations.*`) e `Unidade` só em `DrinkIngrediente`
