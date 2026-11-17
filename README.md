@@ -49,7 +49,13 @@ See `backend/backend.http` for ready-to-run requests.
 
 ## Getting Started
 
-From `backend/`:
+Quick start (Windows): double-click `iniciar.cmd` in the repository root. It installs frontend
+dependencies if needed, opens one window for the backend (http://localhost:5000, Swagger at `/swagger`)
+and one for the frontend (http://localhost:3000), then opens the app in the browser.
+
+Open items are tracked in [PENDENCIAS.md](PENDENCIAS.md).
+
+Manually, from `backend/`:
 
 ```powershell
 cd backend
