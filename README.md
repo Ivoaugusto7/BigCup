@@ -61,6 +61,10 @@ dotnet ef database update --context SqlServerAppDbContext
 Data rules enforced by the database: one rating per user per drink, rating between 1 and 5, quantity > 0,
 unique ingredient names (case-insensitive), unique step order per drink. Dates are stored and returned in UTC.
 
+Read-only views for browsing the data in a database tool — they show the drink/ingredient **names** next to the IDs,
+always up to date (nothing is duplicated): `vw_DrinkIngredientes` (DrinkNome, IngredienteNome), `vw_PassosPreparo`
+(DrinkNome) and `vw_Avaliacoes` (DrinkNome). Defined in `backend/Data/DatabaseViews.cs`.
+
 ## API
 
 Authentication uses ASP.NET Core Identity bearer tokens: register, log in, then send
