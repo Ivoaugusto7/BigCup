@@ -1,23 +1,32 @@
+using BigCup.Data;
 using BigCup.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace BigCup.Controllers
 {
+    /// <summary>Recipientes disponíveis (público, sem login).</summary>
     [ApiController]
     [Route("api/[controller]")]
     public class RecipientesController : ControllerBase
     {
-        private static readonly IReadOnlyList<RecipienteDto> Recipientes = new[]
+        private readonly AppDbContext _context;
+
+        public RecipientesController(AppDbContext context)
         {
-            new RecipienteDto(1, "Shot", 50),
-            new RecipienteDto(2, "Copo", 300),
-            new RecipienteDto(3, "Copo", 500),
-            new RecipienteDto(4, "Copo", 700),
-            new RecipienteDto(5, "Garrafa", 2000),
-            new RecipienteDto(6, "Galão", 5000)
-        };
+            _context = context;
+        }
 
         [HttpGet]
-        public ActionResult<IEnumerable<RecipienteDto>> GetRecipientes() => Ok(Recipientes);
+        public async Task<ActionResult<IEnumerable<RecipienteDto>>> GetRecipientes()
+        {
+            var recipientes = await _context.Recipientes
+                .AsNoTracking()
+                .OrderBy(r => r.CapacidadeMl)
+                .Select(r => new RecipienteDto(r.Id, r.Nome, r.CapacidadeMl))
+                .ToListAsync();
+
+            return Ok(recipientes);
+        }
     }
 }

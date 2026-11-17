@@ -7,9 +7,9 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000
 
 const STATIC_CONTAINERS = [
   { id: 1, nome: 'Shot', volume: '50 ml', icone: '🥃' },
-  { id: 2, nome: 'Copo', volume: '300 ml', icone: '🥛' },
-  { id: 3, nome: 'Copo', volume: '500 ml', icone: '🍺' },
-  { id: 4, nome: 'Copo', volume: '700 ml', icone: '🥤' },
+  { id: 2, nome: 'Copo pequeno', volume: '300 ml', icone: '🥛' },
+  { id: 3, nome: 'Copo médio', volume: '500 ml', icone: '🍺' },
+  { id: 4, nome: 'Copo grande', volume: '700 ml', icone: '🥤' },
   { id: 5, nome: 'Garrafa', volume: '2 Litros', icone: '🍾' },
   { id: 6, nome: 'Galão', volume: '5 Litros', icone: '🛢️' },
 ];

@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace BigCup.Domain
@@ -15,6 +14,13 @@ namespace BigCup.Domain
         public string? Descricao { get; set; }
 
         public int TempoPreparoMinutos { get; set; }
+
+        /// <summary>Dono do drink. <c>null</c> = drink público de exemplo (somente leitura).</summary>
+        public string? UsuarioId { get; set; }
+        public Usuario? Usuario { get; set; }
+
+        public int? RecipienteId { get; set; }
+        public Recipiente? Recipiente { get; set; }
 
         public ICollection<DrinkIngrediente> DrinkIngredientes { get; set; } = new List<DrinkIngrediente>();
         public ICollection<PassoPreparo> PassosPreparo { get; set; } = new List<PassoPreparo>();

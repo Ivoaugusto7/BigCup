@@ -1,8 +1,8 @@
 using System.Text.Json.Serialization;
 using BigCup.Data;
+using BigCup.Domain;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Data.SqlClient;
-using System;
+using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,60 +12,54 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
     });
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-// Configure DbContext: try SQL Server first; if LocalDB is not available, fall back to SQLite for development convenience.
-var defaultConn = builder.Configuration.GetConnectionString("DefaultConnection") ??
-                  "Server=(localdb)\\mssqllocaldb;Database=BigCup;Trusted_Connection=True;";
-
-bool useSqlite = false;
-try
+builder.Services.AddSwaggerGen(c =>
 {
-    // Quick connectivity test for SQL Server (short timeout)
-    var builderSql = new SqlConnectionStringBuilder(defaultConn)
+    // Botão "Authorize" no Swagger: cole o accessToken retornado por /api/auth/login
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        ConnectTimeout = 3
-    };
-    using (var testConn = new SqlConnection(builderSql.ConnectionString))
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        Description = "Token retornado por POST /api/auth/login"
+    });
+    c.AddSecurityRequirement(doc => new OpenApiSecurityRequirement
     {
-        testConn.Open();
-        testConn.Close();
-    }
-}
-catch (Exception ex)
-{
-    // If we cannot open SQL Server (e.g. LocalDB not installed), fall back to SQLite and continue.
-    Console.WriteLine("Warning: SQL Server not available, falling back to SQLite. Error: " + ex.Message);
-    useSqlite = true;
-}
+        [new OpenApiSecuritySchemeReference("Bearer", doc)] = new List<string>()
+    });
+});
 
-if (useSqlite)
-{
-    builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseSqlite("Data Source=bigcup_dev.db"));
-}
-else
-{
-    builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseSqlServer(defaultConn));
-}
+// Banco: provedor definido por Database:Provider (SqlServer | Sqlite). Ver Data/DatabaseSetup.cs.
+builder.Services.AddBigCupDatabase(builder.Configuration, builder.Environment.ContentRootPath);
 
+// Usuários: cadastro/login prontos do ASP.NET Core Identity (token Bearer)
+builder.Services.AddAuthorization();
+builder.Services
+    .AddIdentityApiEndpoints<Usuario>(options =>
+    {
+        options.User.RequireUniqueEmail = true;
+        options.Password.RequiredLength = 8;
+    })
+    .AddEntityFrameworkStores<AppDbContext>();
+
+var corsOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? Array.Empty<string>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
-        policy.AllowAnyOrigin()
+        policy.WithOrigins(corsOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod());
 });
 
-builder.Services.AddScoped<DbSeeder>();
-
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
+// Aplica migrations (e o seed, via UseSeeding) só quando configurado — por padrão apenas em Development.
+// Em produção: dotnet ef database update --context SqlServerAppDbContext
+if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
 {
-    var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
-    await seeder.SeedAsync();
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    app.Logger.LogInformation("Banco: {Provider} ({Database})",
+        DatabaseSetup.GetProvider(app.Configuration), db.Database.GetDbConnection().DataSource);
+    await db.Database.MigrateAsync();
 }
 
 app.UseCors("AllowFrontend");
@@ -75,14 +69,16 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
-if (!app.Environment.IsDevelopment())
+else
 {
     app.UseHttpsRedirection();
 }
 
+app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapGet("/", () => Results.Ok(new { message = "BigCup API", status = "running" }));
+app.MapGroup("/api/auth").WithTags("Auth").MapIdentityApi<Usuario>();
 app.MapControllers();
 
 app.Run();

@@ -1,12 +1,18 @@
 using BigCup.Data;
 using BigCup.Domain;
 using BigCup.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace BigCup.Controllers
 {
+    /// <summary>
+    /// Drinks do usuário logado + drinks públicos de exemplo (somente leitura).
+    /// Drinks de outros usuários nunca aparecem (404).
+    /// </summary>
     [ApiController]
+    [Authorize]
     [Route("api/[controller]")]
     public class DrinksController : ControllerBase
     {
@@ -20,40 +26,46 @@ namespace BigCup.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<DrinkDto>>> GetDrinks()
         {
-            var drinks = await QueryDrinksCompletos()
+            var usuarioId = User.GetUsuarioId();
+            var drinks = await QueryDrinksVisiveis(usuarioId)
                 .AsNoTracking()
-                .OrderBy(d => d.Nome)
+                .OrderBy(d => d.UsuarioId == null) // os do usuário primeiro, exemplos depois
+                .ThenBy(d => d.Nome)
                 .ToListAsync();
 
-            return Ok(drinks.Select(DrinkDto.FromEntity));
+            return Ok(drinks.Select(d => DrinkDto.FromEntity(d, usuarioId)));
         }
 
         [HttpGet("{id:int}")]
         public async Task<ActionResult<DrinkDto>> GetDrink(int id)
         {
-            var drink = await QueryDrinksCompletos()
+            var usuarioId = User.GetUsuarioId();
+            var drink = await QueryDrinksVisiveis(usuarioId)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(d => d.Id == id);
 
-            return drink is null ? NotFound() : Ok(DrinkDto.FromEntity(drink));
+            return drink is null ? NotFound() : Ok(DrinkDto.FromEntity(drink, usuarioId));
         }
 
         [HttpPost]
         public async Task<ActionResult<DrinkDto>> CreateDrink(DrinkInputDto input)
         {
-            var erro = ValidarIngredientesDuplicados(input);
+            var erro = await ValidarEntradaAsync(input);
             if (erro is not null)
             {
                 return erro;
             }
 
+            var usuarioId = User.GetUsuarioId();
             var ingredientes = await ResolverIngredientesAsync(input.Ingredientes);
 
             var drink = new Drink
             {
+                UsuarioId = usuarioId,
                 Nome = input.Nome.Trim(),
                 Descricao = input.Descricao,
                 TempoPreparoMinutos = input.TempoPreparoMinutos,
+                RecipienteId = input.RecipienteId,
                 DrinkIngredientes = input.Ingredientes
                     .Select(i => new DrinkIngrediente
                     {
@@ -70,23 +82,25 @@ namespace BigCup.Controllers
             _context.Drinks.Add(drink);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetDrink), new { id = drink.Id }, DrinkDto.FromEntity(drink));
+            var criado = await QueryDrinksVisiveis(usuarioId).AsNoTracking().FirstAsync(d => d.Id == drink.Id);
+            return CreatedAtAction(nameof(GetDrink), new { id = drink.Id }, DrinkDto.FromEntity(criado, usuarioId));
         }
 
         [HttpPut("{id:int}")]
         public async Task<IActionResult> UpdateDrink(int id, DrinkInputDto input)
         {
-            var erro = ValidarIngredientesDuplicados(input);
+            var erro = await ValidarEntradaAsync(input);
             if (erro is not null)
             {
                 return erro;
             }
 
+            var usuarioId = User.GetUsuarioId();
             var drink = await _context.Drinks
                 .Include(d => d.DrinkIngredientes)
                 .Include(d => d.PassosPreparo)
                 .AsSplitQuery()
-                .FirstOrDefaultAsync(d => d.Id == id);
+                .FirstOrDefaultAsync(d => d.Id == id && d.UsuarioId == usuarioId); // só o dono edita
 
             if (drink is null)
             {
@@ -96,6 +110,7 @@ namespace BigCup.Controllers
             drink.Nome = input.Nome.Trim();
             drink.Descricao = input.Descricao;
             drink.TempoPreparoMinutos = input.TempoPreparoMinutos;
+            drink.RecipienteId = input.RecipienteId;
 
             // Ingredientes: sincroniza pela chave (DrinkId, IngredienteId)
             var ingredientes = await ResolverIngredientesAsync(input.Ingredientes);
@@ -144,7 +159,8 @@ namespace BigCup.Controllers
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteDrink(int id)
         {
-            var drink = await _context.Drinks.FindAsync(id);
+            var usuarioId = User.GetUsuarioId();
+            var drink = await _context.Drinks.FirstOrDefaultAsync(d => d.Id == id && d.UsuarioId == usuarioId);
             if (drink is null)
             {
                 return NotFound();
@@ -156,29 +172,47 @@ namespace BigCup.Controllers
             return NoContent();
         }
 
-        private IQueryable<Drink> QueryDrinksCompletos() => _context.Drinks
+        /// <summary>Drinks públicos + do usuário, com ingredientes, passos, recipiente e SOMENTE a avaliação dele.</summary>
+        private IQueryable<Drink> QueryDrinksVisiveis(string usuarioId) => _context.Drinks
+            .Where(d => d.UsuarioId == null || d.UsuarioId == usuarioId)
             .Include(d => d.DrinkIngredientes)
                 .ThenInclude(di => di.Ingrediente)
             .Include(d => d.PassosPreparo)
-            .Include(d => d.Avaliacoes)
+            .Include(d => d.Recipiente)
+            .Include(d => d.Avaliacoes.Where(a => a.UsuarioId == usuarioId))
             .AsSplitQuery();
 
-        private ActionResult? ValidarIngredientesDuplicados(DrinkInputDto input)
+        private async Task<ActionResult?> ValidarEntradaAsync(DrinkInputDto input)
         {
-            var duplicados = input.Ingredientes
+            var ingredientesRepetidos = input.Ingredientes
                 .GroupBy(i => i.Nome.Trim(), StringComparer.OrdinalIgnoreCase)
                 .Where(g => g.Count() > 1)
                 .Select(g => g.Key)
                 .ToList();
-
-            if (duplicados.Count == 0)
+            if (ingredientesRepetidos.Count > 0)
             {
-                return null;
+                ModelState.AddModelError(nameof(DrinkInputDto.Ingredientes),
+                    $"Ingrediente repetido no mesmo drink: {string.Join(", ", ingredientesRepetidos)}.");
             }
 
-            ModelState.AddModelError(nameof(DrinkInputDto.Ingredientes),
-                $"Ingrediente repetido no mesmo drink: {string.Join(", ", duplicados)}.");
-            return ValidationProblem(ModelState);
+            var ordensRepetidas = input.Passos
+                .GroupBy(p => p.Ordem)
+                .Where(g => g.Count() > 1)
+                .Select(g => g.Key)
+                .ToList();
+            if (ordensRepetidas.Count > 0)
+            {
+                ModelState.AddModelError(nameof(DrinkInputDto.Passos),
+                    $"Ordem de passo repetida: {string.Join(", ", ordensRepetidas)}.");
+            }
+
+            if (input.RecipienteId is int recipienteId &&
+                !await _context.Recipientes.AnyAsync(r => r.Id == recipienteId))
+            {
+                ModelState.AddModelError(nameof(DrinkInputDto.RecipienteId), $"Recipiente {recipienteId} não existe.");
+            }
+
+            return ModelState.IsValid ? null : ValidationProblem(ModelState);
         }
 
         /// <summary>
@@ -204,12 +238,11 @@ namespace BigCup.Controllers
                 resultado.TryAdd(ingrediente.Nome.Trim(), ingrediente);
             }
 
-            foreach (var item in itens)
+            foreach (var nome in nomes)
             {
-                var nome = item.Nome.Trim();
                 if (!resultado.ContainsKey(nome))
                 {
-                    var novo = new Ingrediente { Nome = nome, Unidade = item.Unidade };
+                    var novo = new Ingrediente { Nome = nome };
                     _context.Ingredientes.Add(novo);
                     resultado[nome] = novo;
                 }

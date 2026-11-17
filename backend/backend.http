@@ -1,25 +1,42 @@
-@backend_HostAddress = http://localhost:5099
+@backend_HostAddress = http://localhost:5000
 
 ### Status da API
 GET {{backend_HostAddress}}/
-Accept: application/json
 
-### Listar drinks
+### Listar recipientes (público)
+GET {{backend_HostAddress}}/api/recipientes
+
+### 1) Criar conta
+POST {{backend_HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{ "email": "eu@exemplo.com", "password": "Senha#123" }
+
+### 2) Login -> guarda o accessToken na variável "login"
+# @name login
+POST {{backend_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "eu@exemplo.com", "password": "Senha#123" }
+
+###
+@token = {{login.response.body.$.accessToken}}
+
+### Meus drinks + drinks públicos de exemplo
 GET {{backend_HostAddress}}/api/drinks
-Accept: application/json
-
-### Buscar drink por id
-GET {{backend_HostAddress}}/api/drinks/1
-Accept: application/json
+Authorization: Bearer {{token}}
 
 ### Criar drink (ingredientes por nome; os que não existem são criados)
+# @name novoDrink
 POST {{backend_HostAddress}}/api/drinks
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
   "nome": "Caipirinha",
   "descricao": "Clássico brasileiro.",
   "tempoPreparoMinutos": 4,
+  "recipienteId": 2,
   "ingredientes": [
     { "nome": "Cachaça", "quantidade": 50, "unidade": "ml" },
     { "nome": "Limão", "quantidade": 1, "unidade": "un" },
@@ -31,28 +48,38 @@ Content-Type: application/json
   ]
 }
 
-### Atualizar drink (substitui ingredientes e passos)
-PUT {{backend_HostAddress}}/api/drinks/1
+###
+@drinkId = {{novoDrink.response.body.$.id}}
+
+### Atualizar meu drink (substitui ingredientes e passos)
+PUT {{backend_HostAddress}}/api/drinks/{{drinkId}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "nome": "Margarita Clássica",
-  "descricao": "Versão com mais limão.",
+  "nome": "Caipirinha forte",
   "tempoPreparoMinutos": 5,
+  "recipienteId": 3,
   "ingredientes": [
-    { "nome": "Tequila", "quantidade": 45, "unidade": "ml" },
-    { "nome": "Cointreau", "quantidade": 15, "unidade": "ml" },
-    { "nome": "Suco de limão", "quantidade": 25, "unidade": "ml" }
+    { "nome": "Cachaça", "quantidade": 70, "unidade": "ml" },
+    { "nome": "Limão", "quantidade": 1, "unidade": "un" }
   ],
   "passos": [
-    { "ordem": 1, "instrucao": "Adicione todos os ingredientes em uma coqueteleira com gelo." },
-    { "ordem": 2, "instrucao": "Agite e coe em um copo gelado." }
+    { "ordem": 1, "instrucao": "Macere, adicione gelo e cachaça." }
   ]
 }
 
-### Remover drink
-DELETE {{backend_HostAddress}}/api/drinks/2
+### Avaliar (cria ou atualiza a MINHA avaliação; só eu vejo)
+PUT {{backend_HostAddress}}/api/drinks/{{drinkId}}/avaliacao
+Authorization: Bearer {{token}}
+Content-Type: application/json
 
-### Listar recipientes
-GET {{backend_HostAddress}}/api/recipientes
-Accept: application/json
+{ "nota": 5, "comentario": "Perfeita!" }
+
+### Minhas avaliações
+GET {{backend_HostAddress}}/api/avaliacoes
+Authorization: Bearer {{token}}
+
+### Remover meu drink
+DELETE {{backend_HostAddress}}/api/drinks/{{drinkId}}
+Authorization: Bearer {{token}}

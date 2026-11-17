@@ -31,6 +31,8 @@ frontend/dist/
 *.db
 *.db-shm
 *.db-wal
+*.db-journal
+**/App_Data/
 
 # Local environment files
 .env
