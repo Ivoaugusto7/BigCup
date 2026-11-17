@@ -49,9 +49,15 @@ See `backend/backend.http` for ready-to-run requests.
 
 ## Getting Started
 
-Quick start (Windows): double-click `iniciar.cmd` in the repository root. It installs frontend
-dependencies if needed, opens one window for the backend (http://localhost:5000, Swagger at `/swagger`)
-and one for the frontend (http://localhost:3000), then opens the app in the browser.
+Quick start (Windows), from the repository root in a terminal:
+
+```powershell
+.\iniciar.ps1                # or: .\iniciar.cmd   (add -SemNavegador to skip opening the browser)
+```
+
+It installs frontend dependencies if needed and runs the backend (http://localhost:5000, Swagger at
+`/swagger`) and the frontend (http://localhost:3000) in the same terminal, without opening new windows,
+then opens the app in the browser. Press Ctrl+C to stop both.
 
 Open items are tracked in [PENDENCIAS.md](PENDENCIAS.md).
 
