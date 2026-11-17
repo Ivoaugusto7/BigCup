@@ -1,6 +1,58 @@
 @backend_HostAddress = http://localhost:5099
 
-GET {{backend_HostAddress}}/weatherforecast/
+### Status da API
+GET {{backend_HostAddress}}/
 Accept: application/json
 
-###
+### Listar drinks
+GET {{backend_HostAddress}}/api/drinks
+Accept: application/json
+
+### Buscar drink por id
+GET {{backend_HostAddress}}/api/drinks/1
+Accept: application/json
+
+### Criar drink (ingredientes por nome; os que não existem são criados)
+POST {{backend_HostAddress}}/api/drinks
+Content-Type: application/json
+
+{
+  "nome": "Caipirinha",
+  "descricao": "Clássico brasileiro.",
+  "tempoPreparoMinutos": 4,
+  "ingredientes": [
+    { "nome": "Cachaça", "quantidade": 50, "unidade": "ml" },
+    { "nome": "Limão", "quantidade": 1, "unidade": "un" },
+    { "nome": "Açúcar", "quantidade": 2, "unidade": "colher" }
+  ],
+  "passos": [
+    { "ordem": 1, "instrucao": "Macere o limão com o açúcar no copo." },
+    { "ordem": 2, "instrucao": "Adicione gelo e a cachaça e misture." }
+  ]
+}
+
+### Atualizar drink (substitui ingredientes e passos)
+PUT {{backend_HostAddress}}/api/drinks/1
+Content-Type: application/json
+
+{
+  "nome": "Margarita Clássica",
+  "descricao": "Versão com mais limão.",
+  "tempoPreparoMinutos": 5,
+  "ingredientes": [
+    { "nome": "Tequila", "quantidade": 45, "unidade": "ml" },
+    { "nome": "Cointreau", "quantidade": 15, "unidade": "ml" },
+    { "nome": "Suco de limão", "quantidade": 25, "unidade": "ml" }
+  ],
+  "passos": [
+    { "ordem": 1, "instrucao": "Adicione todos os ingredientes em uma coqueteleira com gelo." },
+    { "ordem": 2, "instrucao": "Agite e coe em um copo gelado." }
+  ]
+}
+
+### Remover drink
+DELETE {{backend_HostAddress}}/api/drinks/2
+
+### Listar recipientes
+GET {{backend_HostAddress}}/api/recipientes
+Accept: application/json

@@ -42,7 +42,8 @@ namespace BigCup.Data
                     .HasForeignKey(di => di.DrinkId);
                 entity.HasOne(di => di.Ingrediente)
                     .WithMany(i => i.DrinkIngredientes)
-                    .HasForeignKey(di => di.IngredienteId);
+                    .HasForeignKey(di => di.IngredienteId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<PassoPreparo>(entity =>

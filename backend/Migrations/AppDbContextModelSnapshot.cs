@@ -168,7 +168,7 @@ namespace backend.Migrations
                     b.HasOne("BigCup.Domain.Ingrediente", "Ingrediente")
                         .WithMany("DrinkIngredientes")
                         .HasForeignKey("IngredienteId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Drink");
