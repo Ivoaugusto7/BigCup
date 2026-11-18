@@ -3,9 +3,9 @@
 Lista do que falta ou precisa melhorar. Marque com `[x]` ao concluir.
 
 ## Funcionalidades
-- [ ] **Frontend: cadastro e login** (`/api/auth/register` e `/api/auth/login`), guardando o token e renovando com `/api/auth/refresh`.
 - [ ] **Frontend: montar drink** — escolher recipiente, ingredientes e passos e salvar com `POST /api/drinks` (a API já está pronta).
 - [ ] **Frontend: meus drinks e minhas avaliações** — listar, editar, apagar e avaliar (`PUT /api/drinks/{id}/avaliacao`, `GET /api/avaliacoes`).
+- [ ] **Cards de recipiente com alturas diferentes**: "Copo pequeno" e "Copo grande" quebram linha; ajustar ao refazer a tela na etapa de montar drink.
 - [ ] **Ligar o recipiente selecionado na tela ao drink** (hoje a seleção fica só no navegador, em `localStorage`).
 - [ ] **Endpoints de Ingredientes** (`GET /api/ingredientes`) para sugerir nomes ao montar o drink.
 - [ ] **Recuperação de senha / confirmação de e-mail**: os endpoints do Identity existem, mas falta configurar um `IEmailSender` real.
@@ -21,6 +21,7 @@ Lista do que falta ou precisa melhorar. Marque com `[x]` ao concluir.
 - [ ] **URL da API no frontend** via `VITE_API_BASE_URL` (padrão `http://localhost:5000`).
 
 ## Concluído
+- [x] Frontend: cadastro e login (telas Entrar/Criar conta, token renovado automaticamente, botão Sair, erros em português)
 - [x] Banco por configuração (SQLite em dev, SQL Server em produção), cada um com suas migrations; sem fallback automático
 - [x] Usuários com login (ASP.NET Core Identity) — drinks e avaliações por usuário, avaliações privadas
 - [x] Integridade no banco: nota 1–5, quantidade > 0, ingrediente único (sem diferenciar maiúsculas), ordem de passo única, uma avaliação por usuário/drink
